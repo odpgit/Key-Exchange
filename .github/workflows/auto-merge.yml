@@ -17,12 +17,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get PR number from the workflow run
-          PR_NUMBER=$(gh api /repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/pull_requests --jq '.[0].number')
+          # Get the head SHA from the workflow run
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          
+          # Find PR with this head SHA
+          PR_NUMBER=$(gh pr list --state open --json number,headRefOid --jq ".[] | select(.headRefOid == \"$HEAD_SHA\") | .number")
           
           if [ -n "$PR_NUMBER" ]; then
             echo "Merging PR #$PR_NUMBER"
             gh pr merge "$PR_NUMBER" --squash --delete-branch || true
           else
-            echo "No PR found"
+            echo "No open PR found for SHA: $HEAD_SHA"
           fi
